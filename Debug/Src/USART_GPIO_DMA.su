@@ -1,0 +1,4 @@
+core_cm4.h:1688:22:__NVIC_EnableIRQ	16	static
+USART_GPIO_DMA.c:11:6:USART_GPIO_Init	4	static
+USART_GPIO_DMA.c:42:6:USART_DMA_Init	16	static
+USART_GPIO_DMA.c:53:6:TX_USART3	16	static

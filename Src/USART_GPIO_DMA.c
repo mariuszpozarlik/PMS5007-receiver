@@ -1,0 +1,68 @@
+/*
+ * USART_GPIO_DMA.c
+ *
+ *  Created on: 16 kwi 2020
+ *      Author: Mariusz
+ */
+
+#include "USART_GPIO_DMA.h"
+#include "main.h"
+
+void USART_GPIO_Init(void)
+{
+	RCC->AHBENR |= RCC_AHBENR_GPIOBEN | RCC_AHBENR_GPIOEEN | RCC_AHBENR_DMA1EN | RCC_AHBENR_GPIOAEN | RCC_AHBENR_GPIODEN;
+	RCC->APB1ENR |= RCC_APB1ENR_TIM2EN | RCC_APB1ENR_USART2EN | RCC_APB1ENR_WWDGEN | RCC_APB1ENR_USART3EN;
+
+	GPIOA->MODER |= 0x80;
+	GPIOA->AFR[0] |= 0x7000;
+
+	GPIOB->MODER |= 0x200000;
+	GPIOB->AFR[1] |= 0x700;
+
+	GPIOE->MODER |= 0x55555555;
+	GPIOE->OTYPER &= 0xFFFF0000;
+	GPIOE->PUPDR = 0x0;
+	GPIOE->OSPEEDR |= 0x55555555;
+
+	USART2->CR1 |= USART_CR1_RXNEIE | USART_CR1_RE | USART_CR1_UE | USART_CR1_TXEIE | USART_CR1_TE;
+	USART2->CR3 |= USART_CR3_DMAR;
+	USART2->BRR = 0xD05;
+
+	USART3->CR1 |= USART_CR1_RE | USART_CR1_UE | USART_CR1_TXEIE | USART_CR1_TE;
+	USART3->BRR = 0xD05;
+
+	//NVIC_EnableIRQ(USART2_IRQn);
+
+	GPIOD->MODER |= 0x55555555; //LED pins
+	GPIOD->OTYPER &= 0xFFFF0000;
+	GPIOD->PUPDR = 0x0;
+	GPIOD->OSPEEDR |= 0x55555555;
+}
+
+void USART_DMA_Init(uint8_t* buff_address)
+{
+	DMA1_Channel6->CNDTR = 32;
+	DMA1_Channel6->CPAR = &(USART2->RDR);
+	DMA1_Channel6->CMAR = buff_address;
+	DMA1_Channel6->CCR |= DMA_CCR_MINC | DMA_CCR_CIRC | DMA_CCR_PL_1 | DMA_CCR_TCIE;
+	DMA1_Channel6->CCR |= DMA_CCR_EN;
+
+	NVIC_EnableIRQ(DMA1_Channel6_IRQn);
+}
+
+void TX_USART3(uint8_t* buff, uint8_t* frameFlag)
+{
+	static uint8_t idx = 0;
+	if((USART3->ISR & USART_ISR_TXE) && *frameFlag)
+	{
+		USART3->TDR = buff[idx];
+		idx++;
+		if(idx > 31)
+		{
+			idx = 0;
+			*frameFlag = 0;
+		}
+	}
+}
+
+
